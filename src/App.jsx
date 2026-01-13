@@ -5,7 +5,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 import Papa from 'papaparse';
 
 // Configuración del worker de PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const categoryColors = {
   'Restaurantes': '#ef4444', 'Delivery': '#f97316', 'Transporte': '#eab308',
