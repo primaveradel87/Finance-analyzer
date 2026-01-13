@@ -1,3 +1,4 @@
+import './index.css'; // <--- AGREGA ESTA LÍNEA AQUÍ
 import React, { useState, useCallback, useMemo } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, AreaChart, Area } from 'recharts';
 import * as pdfjsLib from 'pdfjs-dist';
