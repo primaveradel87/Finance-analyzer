@@ -79,30 +79,48 @@ export default function FinanceAppUltra() {
   });
 
   const processFiles = async () => {
-    setProcessing(true);
-    setStep(3);
-    try {
-      let allRawData = [];
-      for (let i = 0; i < files.length; i++) {
-        setProcessingStatus(`Leyendo ${i + 1}/${files.length}: ${files[i].name}`);
-        if (files[i].name.endsWith('.pdf')) {
-          allRawData.push({ type: 'pdf', content: await parsePDF(files[i]), filename: files[i].name });
-        } else {
-          allRawData.push({ type: 'csv', content: JSON.stringify(await parseCSV(files[i])), filename: files[i].name });
-        }
-      }
-      setProcessingStatus('Analizando con IA...');
-      
-      // Usa función serverless para categorizar
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'categorize',
-          context: `País: ${country?.name}. Moneda salida: ${outputCurrency}. Tasas: 1 USD = 4200 COP, 17.5 MXN, 0.92 EUR.`,
-          messages: [{ role: 'user', content: `Extrae transacciones:\n${allRawData.map(d => `--- ${d.filename} ---\n${d.content.substring(0, 8000)}`).join('\n\n')}\nJSON: {"transactions":[{"date":"2025-01-15","description":"UBER","amount":15.50,"category":"Transporte","merchant":"Uber"}]}` }],
-        }),
-      });
+  setProcessing(true);
+  setStep(3);
+  try {
+    let allRawData = [];
+    for (const file of files) {
+      setProcessingStatus(`Leyendo: ${file.name}`);
+      const content = file.name.endsWith('.pdf') ? await parsePDF(file) : JSON.stringify(await parseCSV(file));
+      allRawData.push({ content, filename: file.name });
+    }
+
+    setProcessingStatus('Analizando con IA...');
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'categorize',
+        context: `País: ${country?.name}. Moneda: ${outputCurrency}.`,
+        messages: [{ role: 'user', content: `Analiza: ${allRawData.map(d => d.content).join('\n')}` }],
+      }),
+    });
+
+    if (!response.ok) throw new Error('Fallo en la comunicación con la IA');
+    
+    const data = await response.json();
+    const aiResponse = data.content?.[0]?.text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(aiResponse);
+
+    if (parsed.transactions) {
+      setTransactions(formatTransactions(parsed.transactions)); // Función auxiliar para limpiar datos
+      setStep(4);
+    } else {
+      throw new Error('Formato de IA no reconocido');
+    }
+  } catch (error) {
+    console.error("Error en procesamiento:", error);
+    setProcessingStatus('Error. Usando datos de simulación...');
+    setTransactions(generateSampleTransactions());
+    setTimeout(() => setStep(4), 1500);
+  } finally {
+    setProcessing(false);
+  }
+};
 
       const data = await response.json();
       let aiResponse = (data.content?.[0]?.text || '{}').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
